@@ -1,3 +1,7 @@
+<?php
+include "download.php"
+?>
+
 <!doctype html>
 <!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7" lang=""> <![endif]-->
 <!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8" lang=""> <![endif]-->
@@ -120,12 +124,9 @@
             <div class="text-center">
               <div class="form-group">
                 <label for="width"></label>
-                <input type="number" name="txt_dem" class="form-control" placeholder="Input Required width in pixels" required>
+                <input type="number" name="txt_dem" class="form-control" placeholder="Please give us the Demension you like" required>
               </div>
-              <!-- <div class="form-group">
-                <label for=""></label>
-                <input type="number" name="user_height" class="form-control" placeholder="Input Required height in pixels" required>
-              </div> -->
+
               <input type="submit" class="btn btn-success" name="form_submit">
             </div>
             <br>
@@ -138,8 +139,6 @@
             if (isset($_POST['form_submit'])) {
               $directoryName = 'resized_images';
               $dimension = $_POST['txt_dem'];
-              $quality = 5;
-
 
               //Check if the directory already exists.
               if (!is_dir($directoryName)) {
@@ -147,79 +146,65 @@
                 mkdir($directoryName, 0755);
               }
 
-              function resizeImage($resourceType, $image_width, $image_height)
-              {
-                global $width;
-                global $height;
-                $resizeWidth = $width;
-                $resizeHeight = $height;
-
-                if ($resizeWidth <= 10) {
-                  echo "Width too small";
-                  die;
-                }
-                if ($resizeHeight <= 10) {
-                  echo "Height too small";
-                  die;
-                }
-
-                $destination = imagecreatetruecolor($resizeWidth, $resizeHeight);
-                imagecopyresampled($destination, $resourceType, 0, 0, 0, 0, $resizeWidth, $resizeHeight, $image_height, $image_width);
-                return $destination;
-              }
-
-
               $imageProcess = 0;
               if (is_array($_FILES)) {
                 $error = $_FILES['upload_image']['error'];
                 if (!$error) {
-                  $quality = 50;
-                  $fileName = $_FILES['upload_image']['tmp_name'];
-                  $imageName = $_FILES['upload_image']['name'];
-                  $uploadPath = "./resized_images/";
-                  $fileExt = pathinfo($_FILES['upload_image']['name'], PATHINFO_EXTENSION);
-                  $image_size = getimagesize($fileName);
-                  $uploadImageType = $image_size[2];
-                  $width = $image_size[0];
-                  $height = $image_size[1];
-                  $ratio = $width / $height;
+                  if ($dimension > 10) {
+                    $quality = 50;
+                    $qualityPng = 5;
+                    $fileName = $_FILES['upload_image']['tmp_name'];
+                    $imageName = $_FILES['upload_image']['name'];
+                    $uploadPath = "resized_images/";
+                    $fileExt = pathinfo($_FILES['upload_image']['name'], PATHINFO_EXTENSION);
+                    $image_size = getimagesize($fileName);
+                    $uploadImageType = $image_size[2];
+                    $width = $image_size[0];
+                    $height = $image_size[1];
+                    $ratio = $width / $height;
 
-                  if ($ratio > 1) {
-                    $new_Width = $dimension;
-                    $new_Height = $dimension / $ratio;
+                    if ($ratio > 1) {
+                      $new_Width = $dimension;
+                      $new_Height = $dimension / $ratio;
+                    } else {
+                      $new_Width = $dimension / $ratio;
+                      $new_Height = $dimension;
+                    }
+                    switch ($uploadImageType) {
+                      case IMAGETYPE_JPEG:
+                        $src = imagecreatefromstring(file_get_contents($fileName));
+                        $destination = imagecreatetruecolor($new_Width, $new_Height);
+                        imagecopyresampled($destination, $src, 0, 0, 0, 0, $new_Width, $new_Height, $width, $height);
+                        imagejpeg($destination, $uploadPath . "thump_" . $imageName, $quality);
+                        break;
+                      case IMAGETYPE_GIF:
+                        $src = imagecreatefromstring(file_get_contents($fileName));
+                        $destination = imagecreatetruecolor($new_Width, $new_Height);
+                        imagecopyresampled($destination, $src, 0, 0, 0, 0, $new_Width, $new_Height, $width, $height);
+                        imagegif($destination, $uploadPath . "thump_" . $imageName, $quality);
+                        break;
+                      case IMAGETYPE_PNG:
+                        $src = imagecreatefromstring(file_get_contents($fileName));
+                        $destination = imagecreatetruecolor($new_Width, $new_Height);
+                        imagecopyresampled($destination, $src, 0, 0, 0, 0, $new_Width, $new_Height, $width, $height);
+                        imagepng($destination, $uploadPath . "thump_" . $imageName, $qualityPng);
+                        break;
+                      default:
+                        $src = imagecreatefromstring(file_get_contents($fileName));
+                        $destination = imagecreatetruecolor($new_Width, $new_Height);
+                        imagecopyresampled($destination, $src, 0, 0, 0, 0, $new_Width, $new_Height, $width, $height);
+                        imagepng($destination, $uploadPath . "thump_" . $imageName, $quality);
+                        break;
+                    }
+
+                    move_uploaded_file(@$file, $uploadPath . $imageName);
+                    $imageProcess = 1;
                   } else {
-                    $new_Width = $dimension / $ratio;
-                    $new_Height = $dimension;
+                    echo "<div>
+                    <p class='alert alert-danger'>Sorry!!! Your dimension is too small</p>
+                  </div>";
+                    die;
                   }
-                  switch ($uploadImageType) {
-                    case IMAGETYPE_JPEG:
-                      $src = imagecreatefromstring(file_get_contents($fileName));
-                      $destination = imagecreatetruecolor($new_Width, $new_Height);
-                      imagecopyresampled($destination, $src, 0, 0, 0, 0, $new_Width, $new_Height, $width, $height);
-                      imagejpeg($destination, $uploadPath . "thump_" . $imageName . "." . $fileExt, $quality);
-                      break;
-                    case IMAGETYPE_GIF:
-                      $src = imagecreatefromstring(file_get_contents($fileName));
-                      $destination = imagecreatetruecolor($new_Width, $new_Height);
-                      imagecopyresampled($destination, $src, 0, 0, 0, 0, $new_Width, $new_Height, $width, $height);
-                      imagegif($destination, $uploadPath . "thump_" . $imageName . "." . $fileExt, $quality);
-                      break;
-                    case IMAGETYPE_PNG:
-                      $src = imagecreatefromstring(file_get_contents($fileName));
-                      $destination = imagecreatetruecolor($new_Width, $new_Height);
-                      imagecopyresampled($destination, $src, 0, 0, 0, 0, $new_Width, $new_Height, $width, $height);
-                      imagepng($destination, $uploadPath . "thump_" . $imageName . "." . $fileExt, $quality);
-                      break;
-                    default:
-                      $src = imagecreatefromstring(file_get_contents($fileName));
-                      $destination = imagecreatetruecolor($new_Width, $new_Height);
-                      imagecopyresampled($destination, $src, 0, 0, 0, 0, $new_Width, $new_Height, $width, $height);
-                      imagepng($destination, $uploadPath . "thump_" . $imageName . "." . $fileExt, $quality);
-                      break;
-                  }
-
-                  move_uploaded_file(@$file, $uploadPath . $imageName . "." . $fileExt);
-                  $imageProcess = 1;
                 } else {
 
                   echo "<div>
@@ -228,12 +213,15 @@
                   die;
                 }
                 if ($imageProcess == 1) {
-                  $outputImage = $uploadPath . "thump_" . $imageName . "." . $fileExt;
+                  $outputImage = $uploadPath . "thump_" . $imageName;
                   echo "<img src= '$outputImage'/>";
                   echo '<br>';
                   echo "<div>
                   <p class='alert alert-success'>Image Resized Successfully</p>
-                </div>";
+                </div>"; ?>
+                  <br>
+                  <a class="btn btn-primary" href="download.php?filename=<?php echo $imageName; ?>">Download</a>
+            <?php
                 } else {
                   echo "<div>
                   <p class='alert alert-danger'>Sorry!!! Invalid Image</p>
